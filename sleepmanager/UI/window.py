@@ -55,6 +55,7 @@ class AddDateDialog(QDialog):
             seconds = int(sec_inp)
             self.dataEntered.emit(seconds)
             self.accept()
+            return
 
         self.seconds_input.clear()
 
@@ -78,10 +79,12 @@ class MainWindow(QWidget):
         super().__init__()
         self.timer_label = QLabel()
         self.working_clock = QtCore.QTimer()
+        self.shutdown_label_clock = QtCore.QTimer()
         self.delete_button = QPushButton()
         self.add_button = QPushButton()
         self.dialog = AddDateDialog(self)
         self.shutdowns: int = 0
+        self.new_shutdown_label = None
 
         self.init_ui()
 
@@ -108,6 +111,8 @@ class MainWindow(QWidget):
         self.working_clock.timeout.connect(self.update_clock)
         self.working_clock.start()
 
+        self.shutdown_label_clock.timeout.connect(self.update_shutdown_label_clock)
+
         self.add_button = QPushButton()
         self.add_button.setText('Add Shutdown')
         self.add_button.setFixedSize(100, 30)
@@ -128,21 +133,19 @@ class MainWindow(QWidget):
                                          "QPushButton:pressed { background-color: #801515; }")
         self.delete_button.clicked.connect(lambda: self.button_click("delete"))
 
-        top_layout = QVBoxLayout()  # Создание нового вертикального макета для верхней области
-        shutdown_list_label = QLabel("Тут будет ваш таймеры сна :)")         # Добавление элементов в верхний макет
-        top_layout.addWidget(shutdown_list_label)
+        self.top_layout = QVBoxLayout()  # Создание нового вертикального макета для верхней области
+        shutdown_list_label = QLabel("Тут будет ваш таймер сна :)")         # Добавление элементов в верхний макет
+        self.top_layout.addWidget(shutdown_list_label)
         shutdown_list_label.setStyleSheet("""
             QLabel {
-                color: #333;
+                color: black;
                 font-size: 18px;
                 padding: 10px;
                 border-radius: 5px;
                 background-color: #f0f0f0;
                 transition: background-color 0.3s;
             }
-            QLabel:hover {
-                background-color: #ddd;
-            }
+
         """)
 
         buttons_layout = QHBoxLayout()  # Создание нового горизонтального макета для кнопок
@@ -150,13 +153,13 @@ class MainWindow(QWidget):
         buttons_layout.addWidget(self.delete_button)
 
         combined_layout = QVBoxLayout()
-        combined_layout.addLayout(top_layout)
+        combined_layout.addLayout(self.top_layout)
         combined_layout.addLayout(buttons_layout)
 
         main_layout.addWidget(self.timer_label)
         main_layout.addLayout(combined_layout)
 
-        top_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
+        self.top_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         buttons_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignBottom)  # Установка координат и размера
 
     def update_clock(self):
@@ -168,6 +171,7 @@ class MainWindow(QWidget):
             self.dialog.show()
             self.dialog.dataEntered.connect(self.handler_seconds_input)
             self.dialog.exec()
+            self.dialog.dataEntered.disconnect()
 
         else:
             print("Нажата кнопка: delete")
@@ -175,12 +179,52 @@ class MainWindow(QWidget):
     def handler_seconds_input(self, seconds):
         if seconds:
             print("handler", seconds)
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+            remaining_seconds = seconds % 60
+
+            result = f"{hours:02d}:{minutes:02d}:{remaining_seconds:02d}"
+            self.shutdowns = seconds
+            if self.new_shutdown_label is None:  # Если метка не создана, создаем её
+                self.new_shutdown_label = QLabel(f"shutdown, {result}", self)
+                self.top_layout.addWidget(self.new_shutdown_label)
+                self.new_shutdown_label.setStyleSheet("""
+                    QLabel {
+                        color: #333;
+                        font-size: 15px;
+                        padding: 5px;
+                        border-radius: 15px;
+                        border: 1px solid black; /* добавляем границу */
+                        background-color: #f0f0f0;
+                        transition: background-color 0.3s, box-shadow 0.3s; /* добавляем тень в анимацию */
+                        box-shadow: 2px 2px 5px rgba(0,0,0,0.3); /* добавляем тень */
+                    }
+                    QLabel:hover {
+                        background-color: #ddd;
+                        box-shadow: 2px 2px 10px rgba(0,0,0,0.5); /* увеличиваем тень при наведении */
+                    }
+                """)
+                self.new_shutdown_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
+                if self.shutdowns > 0:
+                    self.shutdown_label_clock.start(1000)
+            else:
+                # Если метка уже существует, просто обновляем её текст
+                self.new_shutdown_label.setText(f"shutdown, {result}")
+                if self.shutdowns > 0:
+                    self.shutdown_label_clock.start(1000)
+    def update_shutdown_label_clock(self):
+        if self.shutdowns > 0:
+            self.shutdowns -= 1
             hours = self.shutdowns // 3600
             minutes = (self.shutdowns % 3600) // 60
             remaining_seconds = self.shutdowns % 60
-
-            result = f"{hours} часов {minutes} минут {remaining_seconds} секунд"
-            shutdown_label = QLabel(result)
+            result = f"{hours:02d}:{minutes:02d}:{remaining_seconds:02d}"
+            self.new_shutdown_label.setText(f"shutdown, {result}")
+        else:
+            self.shutdown_label_clock.stop()
+            self.top_layout.removeWidget(self.new_shutdown_label)
+            self.new_shutdown_label.deleteLater()
+            self.new_shutdown_label = None
 
 
 if __name__ == '__main__':
