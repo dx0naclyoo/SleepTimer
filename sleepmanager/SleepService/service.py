@@ -19,12 +19,12 @@ class SleepService(ABC):
         pass
 
 
-class ShutdownService(SleepService):  # for Windows
+class SleepServiceWindows(SleepService):  # for Windows
     _shutdown_active = False
 
     @classmethod
     def fake_shutdown(cls, _time: int = 3600):
-        print("shutdown called")
+        print("shutdown called with time", _time)
 
     @classmethod
     def shutdown(cls, _time: int = 3600):
@@ -37,7 +37,16 @@ class ShutdownService(SleepService):  # for Windows
 
     @classmethod
     def cancel_shutdown(cls):
+        print("shutdown cancelled")
         if cls._shutdown_active:
             os_response = os.system("shutdown -a")
             if os_response == 0:
                 cls._shutdown_active = False
+
+
+class SleepServiceLinux:
+    pass
+
+
+class SleepServiceMacOS:
+    pass

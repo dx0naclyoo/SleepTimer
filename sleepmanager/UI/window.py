@@ -1,6 +1,8 @@
 import sys
 from typing import List
 
+from sleepmanager.SleepService.service import SleepService, SleepServiceWindows
+
 from PyQt6 import QtGui, QtCore
 from PyQt6.QtCore import QDateTime, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QHBoxLayout, QPushButton, QDialog, QVBoxLayout, \
@@ -75,8 +77,9 @@ class AddDateDialog(QDialog):
 
 
 class MainWindow(QWidget):
-    def __init__(self):
+    def __init__(self, sleep_service: SleepService):
         super().__init__()
+        self.sleep_service = sleep_service
         self.timer_label = QLabel()
         self.working_clock = QtCore.QTimer()
         self.shutdown_label_clock = QtCore.QTimer()
@@ -134,7 +137,7 @@ class MainWindow(QWidget):
         self.delete_button.clicked.connect(lambda: self.button_click("delete"))
 
         self.top_layout = QVBoxLayout()  # Создание нового вертикального макета для верхней области
-        shutdown_list_label = QLabel("Тут будет ваш таймер сна :)")         # Добавление элементов в верхний макет
+        shutdown_list_label = QLabel("Тут будет ваш таймер сна :)")  # Добавление элементов в верхний макет
         self.top_layout.addWidget(shutdown_list_label)
         shutdown_list_label.setStyleSheet("""
             QLabel {
@@ -168,23 +171,22 @@ class MainWindow(QWidget):
     def button_click(self, button):
         if button == "add":
             print("Нажата кнопка: add")
-            self.dialog.show()
-            self.dialog.dataEntered.connect(self.handler_seconds_input)
-            self.dialog.exec()
-            self.dialog.dataEntered.disconnect()
-
+            self.add_shutdown_label()
         else:
             print("Нажата кнопка: delete")
+            if self.new_shutdown_label:
+                self.delete_shutdown_label()
 
     def handler_seconds_input(self, seconds):
         if seconds:
+            self.shutdowns = seconds
+
             print("handler", seconds)
             hours = seconds // 3600
             minutes = (seconds % 3600) // 60
             remaining_seconds = seconds % 60
 
             result = f"{hours:02d}:{minutes:02d}:{remaining_seconds:02d}"
-            self.shutdowns = seconds
             if self.new_shutdown_label is None:  # Если метка не создана, создаем её
                 self.new_shutdown_label = QLabel(f"shutdown, {result}", self)
                 self.top_layout.addWidget(self.new_shutdown_label)
@@ -212,6 +214,7 @@ class MainWindow(QWidget):
                 self.new_shutdown_label.setText(f"shutdown, {result}")
                 if self.shutdowns > 0:
                     self.shutdown_label_clock.start(1000)
+
     def update_shutdown_label_clock(self):
         if self.shutdowns > 0:
             self.shutdowns -= 1
@@ -221,15 +224,27 @@ class MainWindow(QWidget):
             result = f"{hours:02d}:{minutes:02d}:{remaining_seconds:02d}"
             self.new_shutdown_label.setText(f"shutdown, {result}")
         else:
-            self.shutdown_label_clock.stop()
-            self.top_layout.removeWidget(self.new_shutdown_label)
-            self.new_shutdown_label.deleteLater()
-            self.new_shutdown_label = None
+            if self.new_shutdown_label:
+                self.delete_shutdown_label()
+
+    def add_shutdown_label(self):
+        self.dialog.show()
+        self.dialog.dataEntered.connect(self.handler_seconds_input)
+        self.dialog.exec()
+        self.dialog.dataEntered.disconnect()
+        self.sleep_service.fake_shutdown(self.shutdowns)
+
+    def delete_shutdown_label(self):
+        self.shutdown_label_clock.stop()
+        self.top_layout.removeWidget(self.new_shutdown_label)
+        self.new_shutdown_label.deleteLater()
+        self.new_shutdown_label = None
+        self.sleep_service.cancel_shutdown()
 
 
 if __name__ == '__main__':
     app = GUIApp(sys.argv)
-    main = MainWindow()
+    main = MainWindow(SleepServiceWindows())
 
     app.init_widgets([main])
 
