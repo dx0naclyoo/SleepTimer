@@ -128,14 +128,35 @@ class MainWindow(QWidget):
                                          "QPushButton:pressed { background-color: #801515; }")
         self.delete_button.clicked.connect(lambda: self.button_click("delete"))
 
+        top_layout = QVBoxLayout()  # Создание нового вертикального макета для верхней области
+        shutdown_list_label = QLabel("Тут будет ваш таймеры сна :)")         # Добавление элементов в верхний макет
+        top_layout.addWidget(shutdown_list_label)
+        shutdown_list_label.setStyleSheet("""
+            QLabel {
+                color: #333;
+                font-size: 18px;
+                padding: 10px;
+                border-radius: 5px;
+                background-color: #f0f0f0;
+                transition: background-color 0.3s;
+            }
+            QLabel:hover {
+                background-color: #ddd;
+            }
+        """)
+
         buttons_layout = QHBoxLayout()  # Создание нового горизонтального макета для кнопок
         buttons_layout.addWidget(self.add_button)
         buttons_layout.addWidget(self.delete_button)
 
-        main_layout.addWidget(self.timer_label)
-        main_layout.addStretch(200)
-        main_layout.addLayout(buttons_layout)
+        combined_layout = QVBoxLayout()
+        combined_layout.addLayout(top_layout)
+        combined_layout.addLayout(buttons_layout)
 
+        main_layout.addWidget(self.timer_label)
+        main_layout.addLayout(combined_layout)
+
+        top_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         buttons_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignBottom)  # Установка координат и размера
 
     def update_clock(self):
@@ -152,11 +173,20 @@ class MainWindow(QWidget):
             print("Нажата кнопка: delete")
 
     def handler_seconds_input(self, seconds):
-        print("Seconds:", seconds)
+        if seconds:
+            print("handler", seconds)
+            hours = self.shutdowns // 3600
+            minutes = (self.shutdowns % 3600) // 60
+            remaining_seconds = self.shutdowns % 60
+
+            result = f"{hours} часов {minutes} минут {remaining_seconds} секунд"
+            shutdown_label = QLabel(result)
+
 
 if __name__ == '__main__':
     app = GUIApp(sys.argv)
     main = MainWindow()
+
     app.init_widgets([main])
 
     app.exec()
