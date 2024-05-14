@@ -1,12 +1,12 @@
 import sys
 from typing import List
 
-from sleepmanager.SleepService.service import SleepService, SleepServiceWindows
-
 from PyQt6 import QtGui, QtCore
 from PyQt6.QtCore import QDateTime, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QHBoxLayout, QPushButton, QDialog, QVBoxLayout, \
     QLineEdit
+
+from sleepmanager.SleepService.service import SleepService, SleepServiceWindows
 
 UI_BASE_DIR = sys.path[0]
 
@@ -232,7 +232,8 @@ class MainWindow(QWidget):
         self.dialog.dataEntered.connect(self.handler_seconds_input)
         self.dialog.exec()
         self.dialog.dataEntered.disconnect()
-        self.sleep_service.fake_shutdown(self.shutdowns)
+        if self.shutdowns:
+            self.sleep_service.shutdown(self.shutdowns)
 
     def delete_shutdown_label(self):
         self.shutdown_label_clock.stop()
