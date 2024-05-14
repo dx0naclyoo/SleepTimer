@@ -1,11 +1,29 @@
 import os
+from abc import ABC, abstractmethod
 
 
-class ShutdownService:
+class SleepService(ABC):
+    @classmethod
+    @abstractmethod
+    def fake_shutdown(cls, _time: int = 3600):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def shutdown(cls, _time: int = 3600):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def cancel_shutdown(cls):
+        pass
+
+
+class ShutdownService(SleepService):  # for Windows
     _shutdown_active = False
 
     @classmethod
-    def fake_shutdown(cls, _time: int = None):
+    def fake_shutdown(cls, _time: int = 3600):
         print("shutdown called")
 
     @classmethod

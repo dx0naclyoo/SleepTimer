@@ -22,7 +22,7 @@ class GUIApp(QApplication):
 class AddDateDialog(QDialog):
     dataEntered = pyqtSignal(int)
 
-    def __init__(self, parent=None):
+    def __init__(self, sleep_service, parent=None, ):
         super().__init__(parent)
         self.setWindowTitle("Введите секунды")
 
